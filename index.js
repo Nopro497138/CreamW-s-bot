@@ -1,38 +1,30 @@
+require("dotenv").config();
 const {
   Client,
   GatewayIntentBits,
-  ContainerBuilder,
-  TextDisplayBuilder,
-  SeparatorBuilder,
-  SeparatorSpacingSize,
-  MediaGalleryBuilder,
-  MediaGalleryItemBuilder,
   MessageFlags,
+  AttachmentBuilder,
 } = require("discord.js");
+const path = require("path");
 
 // ─────────────────────────────────────────────
 //  CONFIGURATION  ← edit everything here
 // ─────────────────────────────────────────────
 const CONFIG = {
-  // Bot token from .env or hardcoded (use .env in production!)
   token: process.env.DISCORD_TOKEN,
 
-  // The channel ID where welcome messages should be sent
+  // Channel where welcome messages will be sent
   welcomeChannelId: "1406701856545177732",
 
-  // Accent color of the container sidebar (hex number)
-  accentColor: 0xe84040, // red – change to any hex color
-
-  // ── Big heading shown at the top (supports markdown)
-  // {user} = mention, {username} = plain name, {server} = server name
+  // ── Big heading at the top (supports markdown: # ## **bold** etc.)
+  // Placeholders: {user} = mention, {username} = plain name, {server} = server name
   welcomeTitle: "# Welcome, {user}!",
 
-  // ── Body text shown below the separator (supports full markdown)
-  // Keep it friendly and easy to read. Use \n for new lines.
+  // ── Body text below the separator (supports full markdown, \n for new lines)
   welcomeBody: [
     "Hey {user}, we're glad to have you here! ☀️",
     "",
-    "Feel free to explore the community, introduce yourself, and enjoy chatting with other members.",
+    "Feel free to explore the community, introduce yourself, and enjoy chatting with the other members.",
     "If you have any questions or need help, feel free to reach out to our team at any time.",
     "",
     "Please make sure to read our **rules** before participating in roleplay or chat,",
@@ -43,9 +35,8 @@ const CONFIG = {
     "*– Your Server Team*",
   ].join("\n"),
 
-  // ── GIF shown at the bottom (direct URL to a .gif or tenor/giphy CDN link)
-  welcomeGifUrl:
-    "https://media.giphy.com/media/xT9IgzoKnwFNmISR8I/giphy.gif",
+  // Path to the local GIF file (relative to bot.js)
+  gifPath: path.join(__dirname, "video.gif"),
 };
 // ─────────────────────────────────────────────
 
@@ -61,66 +52,72 @@ client.on("guildMemberAdd", async (member) => {
   const channel = member.guild.channels.cache.get(CONFIG.welcomeChannelId);
 
   if (!channel) {
-    console.error(
-      `❌  Welcome channel not found! Check CONFIG.welcomeChannelId.`
-    );
+    console.error(`❌  Welcome channel not found! Check CONFIG.welcomeChannelId.`);
     return;
   }
 
-  // Replace placeholders in text
-  const replacePlaceholders = (text) =>
+  // Replace placeholders
+  const fill = (text) =>
     text
       .replace(/{user}/g, `<@${member.id}>`)
       .replace(/{username}/g, member.user.username)
       .replace(/{server}/g, member.guild.name);
 
-  // ── Build the Components V2 message
-  const container = new ContainerBuilder()
-    .setAccentColor(CONFIG.accentColor)
+  // Attach the local GIF so we can reference it as attachment://video.gif
+  const gifAttachment = new AttachmentBuilder(CONFIG.gifPath, {
+    name: "video.gif",
+  });
 
+  // ── Pure Components V2 – no container, no embed, no accent sidebar
+  // Component types:
+  //   10 = Text Display
+  //   14 = Separator
+  //   12 = Media Gallery
+  const components = [
     // 1. Big welcome heading
-    .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        replacePlaceholders(CONFIG.welcomeTitle)
-      )
-    )
+    {
+      type: 10,
+      content: fill(CONFIG.welcomeTitle),
+    },
 
-    // 2. Separator (visible divider line)
-    .addSeparatorComponents(
-      new SeparatorBuilder()
-        .setDivider(true)
-        .setSpacing(SeparatorSpacingSize.Small)
-    )
+    // 2. Visible divider line
+    {
+      type: 14,
+      divider: true,
+      spacing: 1, // 1 = small  |  2 = large
+    },
 
-    // 3. Body text (the customizable block)
-    .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        replacePlaceholders(CONFIG.welcomeBody)
-      )
-    )
+    // 3. Body text (freely editable in CONFIG above)
+    {
+      type: 10,
+      content: fill(CONFIG.welcomeBody),
+    },
 
-    // 4. Separator before GIF (no visible line, just spacing)
-    .addSeparatorComponents(
-      new SeparatorBuilder()
-        .setDivider(false)
-        .setSpacing(SeparatorSpacingSize.Large)
-    )
+    // 4. Invisible spacer before GIF
+    {
+      type: 14,
+      divider: false,
+      spacing: 2,
+    },
 
-    // 5. GIF at the bottom
-    .addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder().setURL(CONFIG.welcomeGifUrl)
-      )
-    );
+    // 5. GIF loaded from local file
+    {
+      type: 12,
+      items: [
+        {
+          media: { url: "attachment://video.gif" },
+        },
+      ],
+    },
+  ];
 
   try {
     await channel.send({
-      components: [container],
+      files: [gifAttachment],
+      components,
       flags: MessageFlags.IsComponentsV2,
     });
-    console.log(
-      `📨  Sent welcome message for ${member.user.tag} in #${channel.name}`
-    );
+    console.log(`📨  Welcome message sent for ${member.user.tag}`);
   } catch (err) {
     console.error("❌  Failed to send welcome message:", err);
   }
