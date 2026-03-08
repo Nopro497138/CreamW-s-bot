@@ -18,7 +18,7 @@ const CONFIG = {
   token: process.env.DISCORD_TOKEN,
 
   // The channel ID where welcome messages should be sent
-  welcomeChannelId: "YOUR_WELCOME_CHANNEL_ID",
+  welcomeChannelId: "1406701856545177732",
 
   // Accent color of the container sidebar (hex number)
   accentColor: 0xe84040, // red – change to any hex color
