@@ -1,108 +1,129 @@
-require('dotenv').config();
-const { 
-    Client, 
-    GatewayIntentBits, 
-    Events, 
-    AttachmentBuilder,
-    MessageFlags 
-} = require('discord.js');
+const {
+  Client,
+  GatewayIntentBits,
+  ContainerBuilder,
+  TextDisplayBuilder,
+  SeparatorBuilder,
+  SeparatorSpacingSize,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
+  MessageFlags,
+} = require("discord.js");
+
+// ─────────────────────────────────────────────
+//  CONFIGURATION  ← edit everything here
+// ─────────────────────────────────────────────
+const CONFIG = {
+  // Bot token from .env or hardcoded (use .env in production!)
+  token: process.env.DISCORD_TOKEN,
+
+  // The channel ID where welcome messages should be sent
+  welcomeChannelId: "YOUR_WELCOME_CHANNEL_ID",
+
+  // Accent color of the container sidebar (hex number)
+  accentColor: 0xe84040, // red – change to any hex color
+
+  // ── Big heading shown at the top (supports markdown)
+  // {user} = mention, {username} = plain name, {server} = server name
+  welcomeTitle: "# Welcome, {user}!",
+
+  // ── Body text shown below the separator (supports full markdown)
+  // Keep it friendly and easy to read. Use \n for new lines.
+  welcomeBody: [
+    "Hey {user}, we're glad to have you here! ☀️",
+    "",
+    "Feel free to explore the community, introduce yourself, and enjoy chatting with other members.",
+    "If you have any questions or need help, feel free to reach out to our team at any time.",
+    "",
+    "Please make sure to read our **rules** before participating in roleplay or chat,",
+    "so that a respectful and fair environment is guaranteed for everyone.",
+    "",
+    "We wish you a lot of fun and a great time with us! 🎉",
+    "",
+    "*– Your Server Team*",
+  ].join("\n"),
+
+  // ── GIF shown at the bottom (direct URL to a .gif or tenor/giphy CDN link)
+  welcomeGifUrl:
+    "https://media.giphy.com/media/xT9IgzoKnwFNmISR8I/giphy.gif",
+};
+// ─────────────────────────────────────────────
 
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
 
-client.once(Events.ClientReady, () => {
-    console.log(`✅ Bot ist online als ${client.user.tag}`);
+client.once("ready", () => {
+  console.log(`✅  Logged in as ${client.user.tag}`);
 });
 
-function getWelcomePayload(memberId) {
-    const file = new AttachmentBuilder('./video.gif');
+client.on("guildMemberAdd", async (member) => {
+  const channel = member.guild.channels.cache.get(CONFIG.welcomeChannelId);
 
-    // Wir bauen die Nachricht mit Components V2 (Raw-Objekte für maximale Kompatibilität)
-    return {
-        // Das Flag 32768 (1 << 15) ist ENTSCHEIDEND für Components V2
-        flags: [MessageFlags.IsComponentsV2], 
-        files: [file],
-        components: [
-            {
-                type: 17, // CONTAINER (Die "graue Box" mit dem farbigen Rand)
-                color: 0x2b2d31, // Die Farbe des linken Randes
-                components: [
-                    {
-                        type: 9, // SECTION
-                        components: [
-                            {
-                                type: 10, // TEXT_DISPLAY
-                                content: `# Welcome, <@${memberId}>!`
-                            }
-                        ]
-                    },
-                    {
-                        type: 14, // SEPARATOR (Die Trennlinie)
-                        divider: true,
-                        spacing: 1 // 1 = Small, 2 = Large
-                    },
-                    {
-                        type: 9, // SECTION für den Haupttext
-                        components: [
-                            {
-                                type: 10, // TEXT_DISPLAY
-                                content: `Hey <@${memberId}>, we are thrilled to have you here! ☀️\n\nFeel free to explore the community and enjoy interacting with our members. If you have questions, our team is always here to help.\n\n**Please read our rules** to ensure a fair environment for everyone.\n\nWe wish you a great time! 🎉\n\n*Your Bundeswehr Roleplay Team*`
-                            }
-                        ]
-                    },
-                    {
-                        type: 1, // ACTION_ROW für Buttons innerhalb des Containers
-                        components: [
-                            {
-                                type: 2, // BUTTON
-                                style: 2, // Secondary (Grau)
-                                label: "Get Started",
-                                custom_id: "start_btn"
-                            }
-                        ]
-                    }
-                ]
-            },
-            {
-                type: 12, // MEDIA_GALLERY (Zeigt das GIF/Video sauber an)
-                items: [
-                    {
-                        media: "attachment://video.gif"
-                    }
-                ]
-            }
-        ]
-    };
-}
+  if (!channel) {
+    console.error(
+      `❌  Welcome channel not found! Check CONFIG.welcomeChannelId.`
+    );
+    return;
+  }
 
-// Event: User tritt bei
-client.on(Events.GuildMemberAdd, async member => {
-    const channel = member.guild.channels.cache.get(process.env.WELCOME_CHANNEL_ID);
-    if (!channel) return;
+  // Replace placeholders in text
+  const replacePlaceholders = (text) =>
+    text
+      .replace(/{user}/g, `<@${member.id}>`)
+      .replace(/{username}/g, member.user.username)
+      .replace(/{server}/g, member.guild.name);
 
-    try {
-        await channel.send(getWelcomePayload(member.id));
-    } catch (err) {
-        console.error("Fehler beim Senden der Willkommensnachricht:", err);
-    }
+  // ── Build the Components V2 message
+  const container = new ContainerBuilder()
+    .setAccentColor(CONFIG.accentColor)
+
+    // 1. Big welcome heading
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        replacePlaceholders(CONFIG.welcomeTitle)
+      )
+    )
+
+    // 2. Separator (visible divider line)
+    .addSeparatorComponents(
+      new SeparatorBuilder()
+        .setDivider(true)
+        .setSpacing(SeparatorSpacingSize.Small)
+    )
+
+    // 3. Body text (the customizable block)
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        replacePlaceholders(CONFIG.welcomeBody)
+      )
+    )
+
+    // 4. Separator before GIF (no visible line, just spacing)
+    .addSeparatorComponents(
+      new SeparatorBuilder()
+        .setDivider(false)
+        .setSpacing(SeparatorSpacingSize.Large)
+    )
+
+    // 5. GIF at the bottom
+    .addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder().setURL(CONFIG.welcomeGifUrl)
+      )
+    );
+
+  try {
+    await channel.send({
+      components: [container],
+      flags: MessageFlags.IsComponentsV2,
+    });
+    console.log(
+      `📨  Sent welcome message for ${member.user.tag} in #${channel.name}`
+    );
+  } catch (err) {
+    console.error("❌  Failed to send welcome message:", err);
+  }
 });
 
-// Test-Befehl
-client.on(Events.MessageCreate, async message => {
-    if (message.author.bot) return;
-    if (message.content === '!testwelcome') {
-        try {
-            await message.channel.send(getWelcomePayload(message.author.id));
-        } catch (err) {
-            console.error("Fehler beim Test-Befehl:", err);
-        }
-    }
-});
-
-client.login(process.env.DISCORD_TOKEN);
+client.login(CONFIG.token);
