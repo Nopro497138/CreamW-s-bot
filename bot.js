@@ -36,7 +36,7 @@ const CONFIG = {
   welcomeBody: [
     "Welcome, {user}!",
     "",
-    "Welcome to the server, please look at rules first, to ensure you have the best experience!",
+    "Welcome to the server, please look at our <#1470989289708847105> first, to ensure you have the best experience!",
     "If you have any questions or need help, feel free to reach out to our team at any time.",
     "---",
     "Feel free to say hi to people, explore the channels,",
