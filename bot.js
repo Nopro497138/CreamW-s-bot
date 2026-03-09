@@ -34,17 +34,17 @@ const CONFIG = {
   // Use --- on its own line to insert a visible separator line
   welcomeTitle: "# Welcome, {user}!",
   welcomeBody: [
-    "Hey {user}, we're glad to have you here! ☀️",
+    "Welcome, {user}!",
     "",
-    "Feel free to explore the community, introduce yourself and enjoy chatting with the other members.",
+    "Welcome to the server, please look at rules first, to ensure you have the best experience!",
     "If you have any questions or need help, feel free to reach out to our team at any time.",
     "---",
-    "Please make sure to read our **rules** before participating in roleplay or chat,",
-    "so that a respectful and fair environment is guaranteed for everyone.",
+    "Feel free to say hi to people, explore the channels,",
+    "and meet new people! ♥️",
     "",
     "We wish you a lot of fun and a great time with us! 🎉",
     "",
-    "*– Your Server Team*",
+    "*– Cream Team*",
   ].join("\n"),
 
   // ── Ban DM message ───────────────────────────────────────────────────
@@ -55,10 +55,10 @@ const CONFIG = {
     "",
     "You have been permanently banned from **{server}**.",
     "---",
-    "**Reason:** {reason}",
+    "**Reason:** (Look at dynos message to see the reason)",
     "**Moderator:** {moderator}",
     "---",
-    "If you believe this is a mistake, please contact the server staff.",
+    "If you believe this is a mistake, please appeal here: https://appeal.gg/TVku2Yhtgw",
   ].join("\n"),
 
   // ── Kick DM message ──────────────────────────────────────────────────
@@ -69,7 +69,7 @@ const CONFIG = {
     "",
     "You were kicked from **{server}**.",
     "---",
-    "**Reason:** {reason}",
+    "**Reason:** (Look at dynos message to see the reason)",
     "**Moderator:** {moderator}",
     "---",
     "You may rejoin the server if the link is still active.",
@@ -83,7 +83,7 @@ const CONFIG = {
     "",
     "You have been timed out (muted) in **{server}**.",
     "---",
-    "**Reason:** {reason}",
+    "**Reason:** (Look at dynos message to see the reason)",
     "**Moderator:** {moderator}",
     "**Until:** {until}",
     "---",
