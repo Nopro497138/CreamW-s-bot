@@ -24,7 +24,7 @@ const CONFIG = {
   token:    process.env.DISCORD_TOKEN,
   clientId: process.env.CLIENT_ID,
 
-  welcomeChannelId: "1406701856545177732",
+  welcomeChannelId: "1474284438312456252",
   gifPath:          path.join(__dirname, "video.gif"),
   defaultGifUrl:    "https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/video.gif",
   moderatorRoleId:  "1470984903465238578",
