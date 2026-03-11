@@ -300,7 +300,8 @@ function newLevelSelectState(userId, unlockedPlants, unlockedLevels, levelStars)
 async function renderPvz(state) {
   const tmpPath = path.join(os.tmpdir(), `pvz_${Date.now()}_${Math.random().toString(36).slice(2)}.png`);
   return new Promise((resolve, reject) => {
-    const py = spawn("python3", [path.join(__dirname, "pvz_render.py"), tmpPath]);
+    const pyCmd = process.env.PYTHON_CMD || "python3";
+    const py = spawn(pyCmd, [path.join(__dirname, "pvz_render.py"), tmpPath]);
     let stderr = "";
     py.stderr.on("data", d => { stderr += d.toString(); });
     py.stdin.write(JSON.stringify(state));
