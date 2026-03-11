@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "python3"]
+nixPkgs = ["nodejs_20", "python3", "python3Packages.pip"]
 
 [phases.install]
-cmds = ["npm install", "pip install pillow --break-system-packages || pip install pillow"]
+cmds = ["npm install", "python3 -m pip install pillow || python -m pip install pillow"]
 
 [start]
 cmd = "node bot.js"
