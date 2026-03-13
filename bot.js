@@ -300,7 +300,7 @@ function newLevelSelectState(userId, unlockedPlants, unlockedLevels, levelStars)
 async function renderPvz(state) {
   const tmpPath = path.join(os.tmpdir(), `pvz_${Date.now()}_${Math.random().toString(36).slice(2)}.png`);
   return new Promise((resolve, reject) => {
-    const pyCmd = process.env.PYTHON_CMD || "python3";
+    const pyCmd = "python3";
     const py = spawn(pyCmd, [path.join(__dirname, "pvz_render.py"), tmpPath]);
     let stderr = "";
     py.stderr.on("data", d => { stderr += d.toString(); });
@@ -720,10 +720,6 @@ function placePlant(gs, row) {
 // END OF PART 1
 // Append bot_part2.js directly below this line.
 // ─────────────────────────────────────────────────────────────────────
-// ════════════════════════════════════════════════════════════════════════
-//  bot.js  ·  PART 2 OF 2
-//  Paste this directly after bot_part1.js — do NOT add any code between them.
-// ════════════════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════════════
 //  DISCORD CLIENT
