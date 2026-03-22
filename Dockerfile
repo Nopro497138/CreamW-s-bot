@@ -16,7 +16,7 @@ COPY bot.js ./
 COPY video.gif ./
 COPY sprite_bg.png ./
 COPY sprite_peashooter.png ./
-COPY sprite_walnut.png ./
+COPY sprite_wallnut.png ./
 COPY sprite_sunflower.png ./
 COPY sprite_zombie.png ./
 
