@@ -14,6 +14,11 @@ COPY pvz_render.js ./
 COPY collab.js ./
 COPY bot.js ./
 COPY video.gif ./
+COPY sprite_bg.png ./
+COPY sprite_peashooter.png ./
+COPY sprite_walnut.png ./
+COPY sprite_sunflower.png ./
+COPY sprite_zombie.png ./
 
 # Verify canvas loads correctly
 RUN node -e "const {createCanvas}=require('canvas');const c=createCanvas(10,10);console.log('canvas OK',c.width)"
