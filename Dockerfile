@@ -19,6 +19,7 @@ COPY sprite_peashooter.png ./
 COPY sprite_wallnut.png ./
 COPY sprite_sunflower.png ./
 COPY sprite_zombie.png ./
+COPY sprite_cone.png ./
 
 # Verify canvas loads correctly
 RUN node -e "const {createCanvas}=require('canvas');const c=createCanvas(10,10);console.log('canvas OK',c.width)"
