@@ -1,4 +1,4 @@
-// collab.js — /collab command module (required by test_bot.js)
+// collab.js — /collab command module
 "use strict";
 const {
   MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle,
@@ -7,16 +7,16 @@ const {
 
 const COLLAB_CONFIG = {
   defaultCollabChannelId: "1465608454914707559",
-  approvalChannelId: null,   // null = use channel where /collab was run
-  adminRoleId: null,          // null = use Administrator permission
-  collabCategoryId: null,     // null = no category for new channels
+  approvalChannelId:      "1480573816974479512",
+  adminRoleId:            "1483176429393940663",
+  collabCategoryId:       null,
 };
 
 let L = { debug:()=>{}, info:()=>{}, warn:()=>{}, error:()=>{} };
 function init(logger) { L = logger; }
 
-const sessions = new Map(); // userId → draft
-const collabs  = new Map(); // collabId → ColabData
+const sessions = new Map();
+const collabs  = new Map();
 let ctr = 0;
 function mkId() { return `c${++ctr}_${Date.now()}`; }
 
@@ -31,7 +31,6 @@ function parseParts(str) {
   return str.split(",").map(s=>s.trim()).filter(Boolean).map(name=>({name,userId:null,userTag:null}));
 }
 
-// ── Components V2 builders ────────────────────────────────────────────────
 function buildCollabInfo(c) {
   const partLines = c.parts.map((p,i)=>`**${i+1}. ${p.name}** — ${p.userId?`<@${p.userId}>`:"*(open)*"}`).join("\n");
   const inner = [
@@ -65,7 +64,7 @@ function buildPartButtons(c) {
 }
 
 function buildEditor(s) {
-  const pp = s.parts.length ? s.parts.map(p=>p.name).join(", ").slice(0,120) : "*(none)*";
+  const pp = s.parts.length ? s.parts.map(p=>p.name).join(", ").slice(0,120) : "*(none set)*";
   return [
     {type:10, content:"## 🎵  Collab Creator"},
     {type:14, divider:true, spacing:1},
@@ -77,16 +76,16 @@ function buildEditor(s) {
     {type:14, divider:false, spacing:1},
     {type:10, content:`**Parts:** ${pp}`},
     {type:14, divider:false, spacing:1},
-    {type:10, content:`**Channel:** ${s.ownChannel?"✅ Own channel (bot creates it)":"📢 Posts in <#"+COLLAB_CONFIG.defaultCollabChannelId+">"}`},
+    {type:10, content:`**Channel:** ${s.ownChannel?"✅ Bot creates a dedicated channel":"📢 Posts in <#"+COLLAB_CONFIG.defaultCollabChannelId+">"}`},
     {type:14, divider:true, spacing:1},
-    {type:10, content:"-# Fill all fields then submit for admin approval."},
+    {type:10, content:"-# Fill in all fields then submit for admin approval."},
     {type:1, components:[
       {type:2,style:1,label:"✏️ Name & Song",  custom_id:"collab_edit_basics"},
       {type:2,style:1,label:"✏️ Description",  custom_id:"collab_edit_desc"},
       {type:2,style:1,label:"✏️ Details",      custom_id:"collab_edit_details"},
     ]},
     {type:1, components:[
-      {type:2,style:1,label:"✏️ Parts",                         custom_id:"collab_edit_parts"},
+      {type:2,style:1,label:"✏️ Parts",custom_id:"collab_edit_parts"},
       {type:2,style:s.ownChannel?3:2,label:s.ownChannel?"✅ Own Channel":"📢 Shared Channel",custom_id:"collab_toggle_channel"},
     ]},
     {type:1, components:[
@@ -111,96 +110,74 @@ function buildApprovalMsg(c) {
   ];
 }
 
-// ── Modals ─────────────────────────────────────────────────────────────────
-function modalBasics(s) {
+// Modals — no placeholder examples
+function modalBasics() {
   return new ModalBuilder().setCustomId("collab_modal_basics").setTitle("Name & Song")
     .addComponents(
-      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("name").setLabel("Collab name").setStyle(TextInputStyle.Short).setValue(s.name).setRequired(true).setMaxLength(80)),
-      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("song").setLabel("Song name / ID").setStyle(TextInputStyle.Short).setValue(s.song).setRequired(true).setMaxLength(100)),
-      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("length").setLabel("Length (e.g. 3:42 or 128 bars)").setStyle(TextInputStyle.Short).setValue(s.length).setRequired(true).setMaxLength(40)),
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("name").setLabel("Collab name").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(80)),
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("song").setLabel("Song name or ID").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(100)),
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("length").setLabel("Length").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(40)),
     );
 }
-function modalDesc(s) {
+function modalDesc() {
   return new ModalBuilder().setCustomId("collab_modal_desc").setTitle("Description")
-    .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("description").setLabel("Describe your collab").setStyle(TextInputStyle.Paragraph).setValue(s.description).setRequired(true).setMaxLength(1000)));
+    .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("description").setLabel("Describe your collab").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(1000)));
 }
-function modalDetails(s) {
+function modalDetails() {
   return new ModalBuilder().setCustomId("collab_modal_details").setTitle("Details")
     .addComponents(
-      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("difficulty").setLabel("Difficulty (Easy / Medium / Hard)").setStyle(TextInputStyle.Short).setValue(s.difficulty).setRequired(true).setMaxLength(40)),
-      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("requirements").setLabel("Requirements (e.g. good timing, FX)").setStyle(TextInputStyle.Short).setValue(s.requirements).setRequired(true).setMaxLength(200)),
-      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("decoration").setLabel("Decoration style").setStyle(TextInputStyle.Short).setValue(s.decoration).setRequired(true).setMaxLength(100)),
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("difficulty").setLabel("Difficulty").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(40)),
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("requirements").setLabel("Requirements").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(200)),
+      new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("decoration").setLabel("Decoration style").setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(100)),
     );
 }
-function modalParts(s) {
+function modalParts() {
   return new ModalBuilder().setCustomId("collab_modal_parts").setTitle("Parts")
-    .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("parts").setLabel("Parts (comma-separated)").setPlaceholder("Intro, Verse 1, Chorus, Bridge, Outro").setStyle(TextInputStyle.Paragraph).setValue(s.parts.map(p=>p.name).join(", ")).setRequired(true).setMaxLength(1000)));
+    .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("parts").setLabel("Parts (comma-separated)").setStyle(TextInputStyle.Paragraph).setRequired(true).setMaxLength(1000)));
 }
 
-// ── Handlers ───────────────────────────────────────────────────────────────
 async function handleCommand(interaction) {
   L.info("COLLAB","/collab by",interaction.user.tag);
-  const s = {userId:interaction.user.id, guildId:interaction.guildId, name:"", description:"", song:"", length:"", difficulty:"", requirements:"", decoration:"", parts:[], ownChannel:false};
-  sessions.set(interaction.user.id, s);
-  await interaction.reply({components:buildEditor(s), flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});
+  const s={userId:interaction.user.id,guildId:interaction.guildId,name:"",description:"",song:"",length:"",difficulty:"",requirements:"",decoration:"",parts:[],ownChannel:false};
+  sessions.set(interaction.user.id,s);
+  await interaction.reply({components:buildEditor(s),flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});
 }
 
 async function handleButton(interaction) {
-  const cid = interaction.customId;
+  const cid=interaction.customId;
   L.debug("COLLAB","Button",{cid,user:interaction.user.tag});
 
-  // Editor buttons
-  if (cid==="collab_edit_basics") {
-    const s=sessions.get(interaction.user.id); if(!s) return expired(interaction);
-    await interaction.showModal(modalBasics(s)); return;
-  }
-  if (cid==="collab_edit_desc") {
-    const s=sessions.get(interaction.user.id); if(!s) return expired(interaction);
-    await interaction.showModal(modalDesc(s)); return;
-  }
-  if (cid==="collab_edit_details") {
-    const s=sessions.get(interaction.user.id); if(!s) return expired(interaction);
-    await interaction.showModal(modalDetails(s)); return;
-  }
-  if (cid==="collab_edit_parts") {
-    const s=sessions.get(interaction.user.id); if(!s) return expired(interaction);
-    await interaction.showModal(modalParts(s)); return;
-  }
+  if (cid==="collab_edit_basics") { const s=sessions.get(interaction.user.id); if(!s) return expired(interaction); await interaction.showModal(modalBasics()); return; }
+  if (cid==="collab_edit_desc")   { const s=sessions.get(interaction.user.id); if(!s) return expired(interaction); await interaction.showModal(modalDesc());   return; }
+  if (cid==="collab_edit_details"){ const s=sessions.get(interaction.user.id); if(!s) return expired(interaction); await interaction.showModal(modalDetails()); return; }
+  if (cid==="collab_edit_parts")  { const s=sessions.get(interaction.user.id); if(!s) return expired(interaction); await interaction.showModal(modalParts());   return; }
+
   if (cid==="collab_toggle_channel") {
     const s=sessions.get(interaction.user.id); if(!s) return expired(interaction);
-    s.ownChannel=!s.ownChannel; L.debug("COLLAB","Channel toggled",s.ownChannel);
+    s.ownChannel=!s.ownChannel;
     await interaction.deferUpdate();
     await interaction.editReply({components:buildEditor(s),flags:MessageFlags.IsComponentsV2}); return;
   }
   if (cid==="collab_preview") {
     const s=sessions.get(interaction.user.id); if(!s) return expired(interaction);
-    await interaction.reply({
-      components:[{type:10,content:"-# 👁  Preview — only you see this"},{type:14,divider:true,spacing:1},...buildCollabInfo({...s,hostId:interaction.user.id})],
-      flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral,
-    }); return;
+    await interaction.reply({components:[{type:10,content:"-# 👁  Preview — only visible to you"},{type:14,divider:true,spacing:1},...buildCollabInfo({...s,hostId:interaction.user.id})],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral}); return;
   }
   if (cid==="collab_submit") {
     const s=sessions.get(interaction.user.id); if(!s) return expired(interaction);
     const miss=[];
-    if(!s.name) miss.push("Name"); if(!s.song) miss.push("Song"); if(!s.description) miss.push("Description");
-    if(!s.length) miss.push("Length"); if(!s.difficulty) miss.push("Difficulty");
-    if(!s.requirements) miss.push("Requirements"); if(!s.decoration) miss.push("Decoration");
-    if(!s.parts.length) miss.push("Parts");
-    if (miss.length) {
-      await interaction.reply({components:[{type:17,components:[{type:10,content:`❌  Please fill in: **${miss.join(", ")}**`}]}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral}); return;
-    }
-    const c = {id:mkId(),hostId:interaction.user.id,hostTag:interaction.user.tag,guildId:interaction.guildId,...s,parts:[...s.parts],status:"pending",roleId:null,channelId:null,pendingMsgId:null,pendingChannelId:null,mainMsgId:null};
-    collabs.set(c.id, c); sessions.delete(interaction.user.id);
+    if(!s.name)miss.push("Name"); if(!s.song)miss.push("Song"); if(!s.description)miss.push("Description");
+    if(!s.length)miss.push("Length"); if(!s.difficulty)miss.push("Difficulty");
+    if(!s.requirements)miss.push("Requirements"); if(!s.decoration)miss.push("Decoration");
+    if(!s.parts.length)miss.push("Parts");
+    if(miss.length){await interaction.reply({components:[{type:17,components:[{type:10,content:`❌  Please fill in: **${miss.join(", ")}**`}]}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
+    const c={id:mkId(),hostId:interaction.user.id,hostTag:interaction.user.tag,guildId:interaction.guildId,...s,parts:[...s.parts],status:"pending",roleId:null,channelId:null,pendingMsgId:null,pendingChannelId:null,mainMsgId:null};
+    collabs.set(c.id,c); sessions.delete(interaction.user.id);
     L.info("COLLAB","Submitted",{id:c.id,name:c.name});
-    const aCh = COLLAB_CONFIG.approvalChannelId||interaction.channelId;
-    const aChan = interaction.guild.channels.cache.get(aCh);
-    if (aChan) {
-      try {
-        const msg=await aChan.send({components:buildApprovalMsg(c),flags:MessageFlags.IsComponentsV2});
-        c.pendingMsgId=msg.id; c.pendingChannelId=aCh;
-        L.info("COLLAB","Approval sent",{msgId:msg.id});
-      } catch(e){L.error("COLLAB","Approval send failed",e.message);}
-    }
+    const aChan=interaction.guild.channels.cache.get(COLLAB_CONFIG.approvalChannelId);
+    if(aChan){
+      try{const msg=await aChan.send({components:buildApprovalMsg(c),flags:MessageFlags.IsComponentsV2});c.pendingMsgId=msg.id;L.info("COLLAB","Approval sent",msg.id);}
+      catch(e){L.error("COLLAB","❌ Approval send failed",e.message);}
+    }else{L.warn("COLLAB","⚠️ Approval channel not found",COLLAB_CONFIG.approvalChannelId);}
     await interaction.update({components:[{type:17,components:[{type:10,content:`✅  **${c.name}** submitted for admin approval!`}]}],flags:MessageFlags.IsComponentsV2}); return;
   }
   if (cid==="collab_cancel") {
@@ -208,142 +185,112 @@ async function handleButton(interaction) {
     await interaction.update({components:[{type:10,content:"✖  Cancelled."}],flags:MessageFlags.IsComponentsV2}); return;
   }
 
-  // Approve / Deny
   if (cid.startsWith("collab_approve_")||cid.startsWith("collab_deny_")) {
     const approve=cid.startsWith("collab_approve_");
     const cid2=cid.replace("collab_approve_","").replace("collab_deny_","");
     const c=collabs.get(cid2);
-    if (!c){await interaction.reply({components:[{type:10,content:"❌  Collab not found."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
-    if (!isAdmin(interaction.member)){await interaction.reply({components:[{type:10,content:"❌  Admins only."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
-    if (!approve) {
+    if(!c){await interaction.reply({components:[{type:10,content:"❌  Collab not found."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
+    if(!isAdmin(interaction.member)){await interaction.reply({components:[{type:10,content:"❌  Admin role required."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
+    if(!approve){
       c.status="denied"; L.info("COLLAB","Denied",{id:c.id,by:interaction.user.tag});
-      await interaction.update({components:[{type:17,components:[{type:10,content:`❌  **${c.name}** denied.`}]}],flags:MessageFlags.IsComponentsV2});
-      try{const h=await interaction.client.users.fetch(c.hostId);await h.send({components:[{type:17,components:[{type:10,content:`❌  Your collab **${c.name}** was denied.`}]}],flags:MessageFlags.IsComponentsV2});}catch(e){L.warn("COLLAB","DM host failed",e.message);}
+      await interaction.update({components:[{type:17,components:[{type:10,content:`❌  **${c.name}** denied by <@${interaction.user.id}>.`}]}],flags:MessageFlags.IsComponentsV2});
+      try{const h=await interaction.client.users.fetch(c.hostId);await h.send({components:[{type:17,components:[{type:10,content:`❌  Your collab **${c.name}** was denied.`}]}],flags:MessageFlags.IsComponentsV2});}catch(e){L.warn("COLLAB","⚠️ DM host failed",e.message);}
       return;
     }
     c.status="approved"; L.info("COLLAB","Approved",{id:c.id,name:c.name});
     const guild=interaction.guild;
-    // Create role
-    try {
-      const role=await guild.roles.create({name:`collab: ${c.name}`.slice(0,100),color:Math.floor(Math.random()*0xFFFFFF),mentionable:true,reason:`Collab: ${c.name}`});
-      c.roleId=role.id; L.info("COLLAB","Role created",role.id);
-    } catch(e){L.error("COLLAB","Role create failed",e.message);}
-    if (c.roleId) {
-      try{const hm=await guild.members.fetch(c.hostId);await hm.roles.add(c.roleId);}catch(e){L.warn("COLLAB","Give role to host failed",e.message);}
-    }
-    // Find/create channel
+    try{const role=await guild.roles.create({name:`collab: ${c.name}`.slice(0,100),color:Math.floor(Math.random()*0xFFFFFF),mentionable:true,reason:`Collab: ${c.name}`});c.roleId=role.id;L.info("COLLAB","Role created",role.id);}
+    catch(e){L.error("COLLAB","❌ Role create failed",e.message);}
+    if(c.roleId){try{const hm=await guild.members.fetch(c.hostId);await hm.roles.add(c.roleId);}catch(e){L.warn("COLLAB","⚠️ Give role to host failed",e.message);}}
     let tChan;
-    if (c.ownChannel) {
-      try {
-        const opts={name:c.name.toLowerCase().replace(/[^a-z0-9]/g,"-").slice(0,100),type:ChannelType.GuildText,topic:`${c.name} | Host: ${c.hostTag}`,reason:`Collab: ${c.name}`,permissionOverwrites:[{id:guild.roles.everyone,deny:[PermissionsBitField.Flags.ViewChannel]}]};
-        if (COLLAB_CONFIG.collabCategoryId) opts.parent=COLLAB_CONFIG.collabCategoryId;
-        if (c.roleId) opts.permissionOverwrites.push({id:c.roleId,allow:[PermissionsBitField.Flags.ViewChannel,PermissionsBitField.Flags.SendMessages]});
-        tChan=await guild.channels.create(opts); c.channelId=tChan.id;
-        L.info("COLLAB","Channel created",tChan.id);
-      } catch(e){L.error("COLLAB","Channel create failed",e.message);tChan=guild.channels.cache.get(COLLAB_CONFIG.defaultCollabChannelId);}
-    } else {
-      tChan=guild.channels.cache.get(COLLAB_CONFIG.defaultCollabChannelId);
-    }
-    if (!tChan){await interaction.reply({components:[{type:10,content:"❌  No target channel."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
-    try {
-      const msg=await tChan.send({components:[...buildCollabInfo(c),...buildPartButtons(c)],flags:MessageFlags.IsComponentsV2});
-      c.mainMsgId=msg.id; L.info("COLLAB","Main msg posted",msg.id);
-    } catch(e){L.error("COLLAB","Post failed",e.message);}
+    if(c.ownChannel){
+      try{
+        const opts={name:c.name.toLowerCase().replace(/[^a-z0-9]/g,"-").slice(0,100),type:ChannelType.GuildText,topic:`${c.name} | Host: ${c.hostTag}`,reason:`Collab: ${c.name}`,
+          permissionOverwrites:[{id:guild.roles.everyone,deny:[PermissionsBitField.Flags.ViewChannel]}]};
+        if(COLLAB_CONFIG.collabCategoryId)opts.parent=COLLAB_CONFIG.collabCategoryId;
+        if(c.roleId)opts.permissionOverwrites.push({id:c.roleId,allow:[PermissionsBitField.Flags.ViewChannel,PermissionsBitField.Flags.SendMessages]});
+        tChan=await guild.channels.create(opts);c.channelId=tChan.id;L.info("COLLAB","Channel created",tChan.id);
+      }catch(e){L.error("COLLAB","❌ Channel create failed",e.message);tChan=guild.channels.cache.get(COLLAB_CONFIG.defaultCollabChannelId);}
+    }else{tChan=guild.channels.cache.get(COLLAB_CONFIG.defaultCollabChannelId);}
+    if(!tChan){await interaction.reply({components:[{type:10,content:"❌  No target channel found."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
+    try{const msg=await tChan.send({components:[...buildCollabInfo(c),...buildPartButtons(c)],flags:MessageFlags.IsComponentsV2});c.mainMsgId=msg.id;L.info("COLLAB","Posted",msg.id);}
+    catch(e){L.error("COLLAB","❌ Post failed",e.message);}
     await interaction.update({components:[{type:17,components:[{type:10,content:`✅  **${c.name}** approved! Posted in <#${tChan.id}>.`}]}],flags:MessageFlags.IsComponentsV2});
-    try{const h=await interaction.client.users.fetch(c.hostId);await h.send({components:[{type:17,components:[{type:10,content:`✅  Your collab **${c.name}** was approved! Check <#${tChan.id}>.`}]}],flags:MessageFlags.IsComponentsV2});}catch(e){L.warn("COLLAB","DM host failed",e.message);}
+    try{const h=await interaction.client.users.fetch(c.hostId);await h.send({components:[{type:17,components:[{type:10,content:`✅  Your collab **${c.name}** was approved! Check <#${tChan.id}>.`}]}],flags:MessageFlags.IsComponentsV2});}catch(e){L.warn("COLLAB","⚠️ DM host failed",e.message);}
     return;
   }
 
-  // Take part
-  if (cid.startsWith("collab_take_")) {
+  if(cid.startsWith("collab_take_")){
     const rest=cid.replace("collab_take_","");
-    const lastUs=rest.lastIndexOf("_"); const collabId=rest.slice(0,lastUs); const idx=parseInt(rest.slice(lastUs+1),10);
+    const li=rest.lastIndexOf("_"); const collabId=rest.slice(0,li); const idx=parseInt(rest.slice(li+1),10);
     const c=collabs.get(collabId);
     if(!c){await interaction.reply({components:[{type:10,content:"❌  Collab not found."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
     const part=c.parts[idx];
     if(!part){await interaction.reply({components:[{type:10,content:"❌  Part not found."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
     if(part.userId){await interaction.reply({components:[{type:10,content:`❌  **${part.name}** is already taken by <@${part.userId}>.`}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
-    part.userId=interaction.user.id; part.userTag=interaction.user.tag;
+    part.userId=interaction.user.id;part.userTag=interaction.user.tag;
     L.info("COLLAB","Part taken",{collab:c.name,part:part.name,user:interaction.user.tag});
-    if(c.roleId){try{const m=await interaction.guild.members.fetch(interaction.user.id);await m.roles.add(c.roleId);}catch(e){L.warn("COLLAB","Give role failed",e.message);}}
+    if(c.roleId){try{const m=await interaction.guild.members.fetch(interaction.user.id);await m.roles.add(c.roleId);}catch(e){L.warn("COLLAB","⚠️ Give role failed",e.message);}}
     await refreshMsg(interaction,c);
-    await interaction.reply({components:[{type:17,components:[{type:10,content:`✅  You joined **${c.name}** for: **${part.name}**!`}]}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral}); return;
+    await interaction.reply({components:[{type:17,components:[{type:10,content:`✅  You joined **${c.name}** for the part: **${part.name}**!`}]}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral}); return;
   }
-
-  // Manage parts
-  if (cid.startsWith("collab_manage_")) {
+  if(cid.startsWith("collab_manage_")){
     const collabId=cid.replace("collab_manage_",""); const c=collabs.get(collabId);
     if(!c){await interaction.reply({components:[{type:10,content:"❌  Not found."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
-    if(interaction.user.id!==c.hostId&&!isAdmin(interaction.member)){await interaction.reply({components:[{type:10,content:"❌  Host only."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
-    await interaction.showModal(
-      new ModalBuilder().setCustomId(`collab_modal_manage_${collabId}`).setTitle("Reset a Part")
-        .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("pn").setLabel(`Part number to reset (1–${c.parts.length})`).setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(3)))
-    ); return;
+    if(interaction.user.id!==c.hostId&&!isAdmin(interaction.member)){await interaction.reply({components:[{type:10,content:"❌  Host or admin only."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
+    await interaction.showModal(new ModalBuilder().setCustomId(`collab_modal_manage_${collabId}`).setTitle("Reset a Part")
+      .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("pn").setLabel(`Part number to reset (1-${c.parts.length})`).setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(3)))); return;
   }
-
-  // Close
-  if (cid.startsWith("collab_close_")) {
+  if(cid.startsWith("collab_close_")){
     const collabId=cid.replace("collab_close_",""); const c=collabs.get(collabId);
     if(!c){await interaction.reply({components:[{type:10,content:"❌  Not found."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
     if(interaction.user.id!==c.hostId&&!isAdmin(interaction.member)){await interaction.reply({components:[{type:10,content:"❌  Host or admin only."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
-    c.status="closed"; L.info("COLLAB","Closed",{id:c.id,by:interaction.user.tag});
-    await interaction.update({components:[{type:17,components:[{type:10,content:`🔒  **${c.name}** closed.`}]}],flags:MessageFlags.IsComponentsV2}); return;
+    c.status="closed";
+    await interaction.update({components:[{type:17,components:[{type:10,content:`🔒  **${c.name}** has been closed.`}]}],flags:MessageFlags.IsComponentsV2}); return;
   }
 }
 
 async function handleModal(interaction) {
   const cid=interaction.customId;
   L.debug("COLLAB","Modal",{cid,user:interaction.user.tag});
-
-  if (["collab_modal_basics","collab_modal_desc","collab_modal_details","collab_modal_parts"].includes(cid)) {
+  if(["collab_modal_basics","collab_modal_desc","collab_modal_details","collab_modal_parts"].includes(cid)){
     const s=sessions.get(interaction.user.id); if(!s) return expired(interaction);
     if(cid==="collab_modal_basics"){s.name=interaction.fields.getTextInputValue("name");s.song=interaction.fields.getTextInputValue("song");s.length=interaction.fields.getTextInputValue("length");}
-    else if(cid==="collab_modal_desc") s.description=interaction.fields.getTextInputValue("description");
+    else if(cid==="collab_modal_desc")    s.description=interaction.fields.getTextInputValue("description");
     else if(cid==="collab_modal_details"){s.difficulty=interaction.fields.getTextInputValue("difficulty");s.requirements=interaction.fields.getTextInputValue("requirements");s.decoration=interaction.fields.getTextInputValue("decoration");}
-    else if(cid==="collab_modal_parts") s.parts=parseParts(interaction.fields.getTextInputValue("parts"));
-    L.info("COLLAB","Session updated",{field:cid});
+    else if(cid==="collab_modal_parts")   s.parts=parseParts(interaction.fields.getTextInputValue("parts"));
     sessions.set(interaction.user.id,s);
     await interaction.deferUpdate();
     await interaction.editReply({components:buildEditor(s),flags:MessageFlags.IsComponentsV2}); return;
   }
-
-  if (cid.startsWith("collab_modal_manage_")) {
-    const collabId=cid.replace("collab_modal_manage_",""); const c=collabs.get(collabId);
-    if(!c) return;
+  if(cid.startsWith("collab_modal_manage_")){
+    const collabId=cid.replace("collab_modal_manage_",""); const c=collabs.get(collabId); if(!c)return;
     const idx=parseInt(interaction.fields.getTextInputValue("pn"),10)-1;
-    if(isNaN(idx)||idx<0||idx>=c.parts.length){
-      await interaction.reply({components:[{type:10,content:`❌  Invalid. Parts: 1–${c.parts.length}.`}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral}); return;
-    }
-    const p=c.parts[idx]; p.userId=null; p.userTag=null;
-    L.info("COLLAB","Part reset",{collab:c.name,part:p.name});
-    await interaction.deferUpdate();
-    await refreshMsg(interaction,c);
-    await interaction.followUp({components:[{type:17,components:[{type:10,content:`✅  **${p.name}** is open again.`}]}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral}); return;
+    if(isNaN(idx)||idx<0||idx>=c.parts.length){await interaction.reply({components:[{type:10,content:`❌  Invalid part number. Range: 1–${c.parts.length}.`}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});return;}
+    const p=c.parts[idx]; const old=p.userId; p.userId=null; p.userTag=null;
+    L.info("COLLAB","Part reset",{collab:c.name,part:p.name,was:old});
+    await interaction.deferUpdate(); await refreshMsg(interaction,c);
+    await interaction.followUp({components:[{type:17,components:[{type:10,content:`✅  **${p.name}** is now open again.`}]}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral}); return;
   }
 }
 
-async function refreshMsg(interaction,c) {
+async function refreshMsg(interaction,c){
   const chId=c.channelId||COLLAB_CONFIG.defaultCollabChannelId;
-  if(!chId||!c.mainMsgId) return;
-  try {
-    const ch=interaction.guild.channels.cache.get(chId);
-    if(!ch) return;
+  if(!chId||!c.mainMsgId)return;
+  try{
+    const ch=interaction.guild.channels.cache.get(chId); if(!ch)return;
     const msg=await ch.messages.fetch(c.mainMsgId);
     await msg.edit({components:[...buildCollabInfo(c),...buildPartButtons(c)],flags:MessageFlags.IsComponentsV2});
-    L.debug("COLLAB","Message refreshed",c.mainMsgId);
-  } catch(e){L.warn("COLLAB","Refresh failed",e.message);}
+  }catch(e){L.warn("COLLAB","⚠️ Refresh failed",e.message);}
 }
 
-async function expired(interaction) {
-  L.warn("COLLAB","Session expired",interaction.user.tag);
+async function expired(interaction){
   await interaction.reply({components:[{type:10,content:"❌  Session expired. Run `/collab` again."}],flags:MessageFlags.IsComponentsV2|MessageFlags.Ephemeral});
 }
 
 module.exports = {
-  init,
-  handleCommand,
-  handleButton,
-  handleModal,
-  isCollabButton: (cid)=>cid.startsWith("collab_"),
-  isCollabModal:  (cid)=>cid.startsWith("collab_modal_"),
+  init, handleCommand, handleButton, handleModal,
+  isCollabButton:(cid)=>cid.startsWith("collab_"),
+  isCollabModal: (cid)=>cid.startsWith("collab_modal_"),
+  isAdmin,
 };
